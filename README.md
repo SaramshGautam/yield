@@ -14,9 +14,7 @@ This project uses a **Genetic Algorithm (GA)** to optimize reaction yield by var
 4. [Requirements](#requirements)
 5. [How to Run](#how-to-run)
 6. [Key Outputs](#key-outputs)
-7. [File Structure](#file-structure)
-8. [Future Enhancements](#future-enhancements)
-9. [License](#license)
+7. [Future Enhancements](#future-enhancements)
 
 ---
 
