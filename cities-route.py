@@ -2,9 +2,10 @@ import numpy as np
 import folium
 import googlemaps
 from sko.GA import GA_TSP
+import matplotlib.pyplot as plt
 
 # Initialize Google Maps API client
-API_KEY = "AIzaSyB2ICaLs0Jq9U5OyEGzvVsryUI913KdlwE"  # Replace with your API key
+API_KEY = "AIzaSyB2ICaLs0Jq9U5OyEGzvVsryUI913KdlwE" # Replace with your API key
 gmaps = googlemaps.Client(key=API_KEY)
 
 # Get user input for cities
@@ -47,7 +48,23 @@ def cal_total_distance(routine):
     num_cities, = routine.shape
     return sum([distance_matrix[routine[i % num_cities], routine[(i + 1) % num_cities]] for i in range(num_cities)])
 
-# Run the Genetic Algorithm
+# 1. Generate a Random Route
+random_route = np.random.permutation(num_cities)
+random_route_ = np.concatenate([random_route, [random_route[0]]])  # Close the loop
+random_route_distance = cal_total_distance(random_route)
+
+# Create a Folium map for the random route
+m_random = folium.Map(location=city_coordinates[0], zoom_start=5)
+for i, coord in enumerate(city_coordinates):
+    folium.Marker(location=coord, popup=cities[i], icon=folium.Icon(color='blue')).add_to(m_random)
+for i in range(len(random_route_) - 1):
+    start = random_route_[i]
+    end = random_route_[i + 1]
+    folium.PolyLine(locations=road_routes[(start, end)], color='orange', weight=5, opacity=0.7).add_to(m_random)
+m_random.save("random_route_map.html")
+print(f"Random route map saved as 'random_route_map.html' with distance: {random_route_distance:.2f} km")
+
+# 2. Optimize the Route using GA
 ga_tsp = GA_TSP(func=cal_total_distance, n_dim=num_cities, size_pop=100, max_iter=1000, prob_mut=0.2)
 best_points, best_distance = ga_tsp.run()
 
@@ -55,24 +72,29 @@ best_points, best_distance = ga_tsp.run()
 best_points_ = np.concatenate([best_points, [best_points[0]]])  # Close the loop
 optimized_route_coords = [city_coordinates[i] for i in best_points_]
 
-# Create a Folium map
-map_center = city_coordinates[0]
-m = folium.Map(location=map_center, zoom_start=5)
-
-# Add city markers
+# Create a Folium map for the optimized route
+m_optimized = folium.Map(location=city_coordinates[0], zoom_start=5)
 for i, coord in enumerate(city_coordinates):
-    folium.Marker(location=coord, popup=cities[i], icon=folium.Icon(color='blue')).add_to(m)
-
-# Plot road routes
+    folium.Marker(location=coord, popup=cities[i], icon=folium.Icon(color='blue')).add_to(m_optimized)
 for i in range(len(best_points_) - 1):
     start = best_points_[i]
     end = best_points_[i + 1]
-    folium.PolyLine(locations=road_routes[(start, end)], color='red', weight=5, opacity=0.7).add_to(m)
+    folium.PolyLine(locations=road_routes[(start, end)], color='red', weight=5, opacity=0.7).add_to(m_optimized)
+m_optimized.save("optimized_route_map.html")
+print(f"Optimized route map saved as 'optimized_route_map.html' with distance: {best_distance[0]:.2f} km")
 
-# Save and display the map
-map_file = "tsp_road_routes_map.html"
-m.save(map_file)
-print(f"The map has been saved as {map_file}. Open this file in a web browser to view the map.")
+# 3. Plot Improvement in Distance over Generations
+plt.figure(figsize=(10, 6))
+plt.plot(ga_tsp.generation_best_Y, label='GA Optimization Progress', color='green')
+plt.axhline(y=random_route_distance, color='orange', linestyle='--', label='Random Route Distance')
+plt.title("Distance Reduction Using Genetic Algorithm", fontsize=16)
+plt.xlabel("Generation", fontsize=14)
+plt.ylabel("Distance (km)", fontsize=14)
+plt.legend()
+plt.grid(True)
+plt.savefig("distance_reduction_plot.png")
+plt.show()
 
-# Display the best road distance
-print(f"Best Total Road Distance: {best_distance[0]:.2f} km")
+# Print distances for comparison
+print(f"Random Route Distance: {random_route_distance:.2f} km")
+print(f"Optimized Route Distance: {best_distance[0]:.2f} km")
